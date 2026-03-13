@@ -15,6 +15,7 @@ Modified 2026-3-13
 
 import re
 import sys
+from pathlib import Path
 
 class TestbenchGenerator(object):
     '''
@@ -58,7 +59,7 @@ class TestbenchGenerator(object):
                 if(self.ofile_name == None):
                     ofname = "tb_%s.v" % self.mod_name
                     self.ofile = open(ofname, 'w')
-                    print ("You have not specified an output file name, use '%s' instead." % ofname) 
+                    print ("You haven't specified an output file name, use '%s' instead." % ofname) 
                 else:
                     self.ofile = open(self.ofile_name, 'w')
                     print ("Output file is '%s'." % self.ofile_name)
@@ -74,56 +75,59 @@ class TestbenchGenerator(object):
         cont = re.sub(r"//[^\n^\r]*", '\n', cont)
         ## clean '/* ... */'
         cont = re.sub(r"/\*.*\*/", '', cont)
-        ## clean '`define ..., etc.'
-        #cont = re.sub(r"[^\n^\r]+`[^\n^\r]*", '\n', cont)
         ## clean tables
         cont = re.sub(r'    +', ' ', cont)
-        ## clean '\n' * '\r'
-        #cont = re.sub(r'[\n\r]+', '', cont)
         return cont
         
     def parser(self):
         print ("Parsing...")
-        # print vf_cont 
         mod_pattern = r"module[\s]+(\S*)[\s]*\([^\)]*\)[\s\S]*"  
         
         module_result = re.findall(mod_pattern, self.clean_other(self.vcont))
-        #print module_result
         self.mod_name = module_result[0]
         
         self.parser_inoutput()
         self.find_clk_rst()
              
-    
     def parser_inoutput(self):
         pin_list = self.clean_other(self.vcont) 
         
-        comp_pin_list_pre = []
-        for i in re.findall(r'(input|output|inout)[\s]+([^;,\)]+)[\s]*[;,]', pin_list):
-            comp_pin_list_pre.append((i[0], re.sub(r"^reg[\s]*", "", i[1])))
-            
         comp_pin_list = []
-        type_name = ['reg', 'wire', 'wire', "ERROR"]
-        for i in comp_pin_list_pre:
-            x = re.split(r']', i[1])
-            type = 0;
-            if i[0] == 'input':
-                type = 0
-            elif i[0] == 'output':
-                type = 1
-            elif i[0] == 'inout':
-                type = 2
-            else:
-                type = 3
+        # Use lookahead to handle multiple signals per declaration and missing semicolons
+        regex = r'(input|output|inout)\s+(.*?)(?=[;)]|\binput\b|\boutput\b|\binout\b|$)'
+        
+        for match in re.finditer(regex, pin_list, re.DOTALL):
+            direction = match.group(1)
+            body = match.group(2)
+            
+            # Extract optional range (e.g., [31:0])
+            range_str = ""
+            r_match = re.search(r'(\[[^\]]+\])', body)
+            if r_match:
+                range_str = r_match.group(1)
+                body = body.replace(range_str, '')
+                
+            # Clean up 'reg' and 'wire' keywords
+            body = re.sub(r'\b(reg|wire)\b', '', body)
+            
+            # Process each comma-separated signal
+            for sig in body.split(','):
+                sig = sig.strip()
+                if not sig:
+                    continue
+                
+                if direction == 'input':
+                    type_name = 'reg'
+                elif direction == 'output':
+                    type_name = 'wire'
+                elif direction == 'inout':
+                    type_name = 'wire'
+                else:
+                    type_name = 'ERROR'
 
-            if len(x) == 2:
-                x[1] = re.sub('[\s]*', '', x[1])
-                comp_pin_list.append((i[0], x[1], x[0] + ']', type_name[type]))
-            else:
-                comp_pin_list.append((i[0], x[0], '', type_name[type]))
+                comp_pin_list.append((direction, sig, range_str, type_name))
         
         self.pin_list = comp_pin_list
-        # for i in self.pin_list: print i
         
     def print_dut(self):
         max_len = 0
@@ -131,7 +135,6 @@ class TestbenchGenerator(object):
             pin_name = cpin_name[1]
             if len(pin_name) > max_len:
                 max_len = len(pin_name)
-        
         
         self.printo( "%s uut (\n" % self.mod_name )
         
@@ -165,7 +168,13 @@ class TestbenchGenerator(object):
                 break
 
     def print_module_head(self):
-        self.printo("`include \"timescale.v\"\nmodule tb_%s;\n\n" % self.mod_name)
+        cur_dir = Path(self.vfile_name).resolve()
+        #print(cur_dir)
+        root_dir = Path(re.search(r'[\w/]*uArch_x86_proj', str(cur_dir)).group())
+        #print(root_dir)
+        rel_path = cur_dir.relative_to(root_dir);
+        #print(rel_path);
+        self.printo("`include \"%s\"\nmodule tb_%s;\n\n" % (str(rel_path), self.mod_name))
         
     def print_module_end(self):
         self.printo("endmodule\n")
@@ -218,4 +227,3 @@ License: Beerware
     tbg.print_clock_gen()
     tbg.print_module_end()
     tbg.close()
-
