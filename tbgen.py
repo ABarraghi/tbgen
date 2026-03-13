@@ -174,7 +174,7 @@ class TestbenchGenerator(object):
         #print(root_dir)
         rel_path = cur_dir.relative_to(root_dir);
         #print(rel_path);
-        self.printo("`include \"%s\"\nmodule tb_%s;\n\n" % (str(rel_path), self.mod_name))
+        self.printo("`timescale 1ns / 1ps\n`include \"%s\"\nmodule tb_%s;\n\n" % (str(rel_path), self.mod_name))
         
     def print_module_end(self):
         self.printo("endmodule\n")
