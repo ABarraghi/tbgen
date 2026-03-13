@@ -7,8 +7,10 @@
 
 '''
 Created on 2010-4-23
+Modified 2026-3-13
 
 @author: Alex Guo
+@author: Arman Barraghi
 '''
 
 import re
@@ -32,7 +34,7 @@ class TestbenchGenerator(object):
         self.reset_name = 'rst'
         
         if vfile_name == None:
-            sys.stderr.write("ERROR: You aren't specfic a input file name.\n")
+            sys.stderr.write("ERROR: You haven't specfified an input file name.\n")
             sys.exit(1)
         else:
             self.open()
@@ -46,8 +48,8 @@ class TestbenchGenerator(object):
         try:
             self.vfile = open(self.vfile_name, 'r')
             self.vcont = self.vfile.read() 
-        except Exception, e:
-            print "ERROR:Open and read file error.\n ERROR:    %s" % e
+        except Exception as e:
+            print ("ERROR: Open and read file error.\n ERROR:    %s" % e)
             sys.exit(1)
             
     def open_outputfile(self, ofile_name = None):
@@ -56,15 +58,15 @@ class TestbenchGenerator(object):
                 if(self.ofile_name == None):
                     ofname = "tb_%s.v" % self.mod_name
                     self.ofile = open(ofname, 'w')
-                    print "Your are not specify a output file name, use '%s' instead." % ofname 
+                    print ("You have not specified an output file name, use '%s' instead." % ofname) 
                 else:
                     self.ofile = open(self.ofile_name, 'w')
-                    print "Output file is '%s'." % self.ofile_name
+                    print ("Output file is '%s'." % self.ofile_name)
             else:
                 self.ofile = open(ofile_name, 'w')
-                print "Output file is '%s'." % ofile_name
-        except Exception, e:
-            print "ERROR:open and write output file error. \n ERROR:    %s" % e
+                print ("Output file is '%s'." % ofile_name)
+        except Exception as e:
+            print ("ERROR: open and write output file error. \n ERROR:    %s" % e)
             sys.exit(1)
                 
     def clean_other(self, cont):
@@ -81,7 +83,7 @@ class TestbenchGenerator(object):
         return cont
         
     def parser(self):
-        print "Parsering..."
+        print ("Parsing...")
         # print vf_cont 
         mod_pattern = r"module[\s]+(\S*)[\s]*\([^\)]*\)[\s\S]*"  
         
@@ -133,14 +135,14 @@ class TestbenchGenerator(object):
         
         self.printo( "%s uut (\n" % self.mod_name )
         
-        align_cont = self.align_print(map(lambda x:("", "." + x[1], "(", x[1], '),'), self.pin_list), 4)
+        align_cont = self.align_print(list(map(lambda x:("", "." + x[1], "(", x[1], '),'), self.pin_list)), 4)
         align_cont = align_cont[:-2] + "\n"
         self.printo( align_cont )
         
         self.printo( ");\n" )
         
     def print_wires(self):
-        self.printo(self.align_print(map(lambda x:(x[3], x[2], x[1], ';'), self.pin_list), 4))
+        self.printo(self.align_print(list(map(lambda x:(x[3], x[2], x[1], ';'), self.pin_list)), 4))
         self.printo("\n")
     
     def print_clock_gen(self):
@@ -153,13 +155,13 @@ class TestbenchGenerator(object):
         for pin in self.pin_list:
             if re.match(r'[\S]*(clk|clock)[\S]*', pin[1]):
                 self.clock_name = pin[1]
-                print "I think your clock signal is '%s'." % pin[1]
+                print ("I think your clock signal is '%s'." % pin[1])
                 break
 
         for pin in self.pin_list:
             if re.match(r'rst|reset', pin[1]):
                 self.reset_name = pin[1]
-                print "I think your reset signal is '%s'." % pin[1]
+                print ("I think your reset signal is '%s'." % pin[1])
                 break
 
     def print_module_head(self):
@@ -174,7 +176,7 @@ class TestbenchGenerator(object):
     def close(self):
         if self.vfile != None:
             self.vfile.close()
-        print "Output finished.\n\n"
+        print ("Output finished.\n\n")
 
     def align_print(self, content, indent):
         """ Align pretty print."""
@@ -183,8 +185,8 @@ class TestbenchGenerator(object):
         col_len = len(content[0])
         align_cont = [""] * row_len
         for i in range(col_len):
-            col = map(lambda x:x[i], content)
-            max_len = max(map(len, col))
+            col = list(map(lambda x:x[i], content))
+            max_len = max(map(len, col), default=0)
             for i in range(row_len):
                 l = len(col[i])
                 align_cont[i] += "%s%s" % (col[i], (indent + max_len - l) * ' ')
@@ -195,14 +197,15 @@ class TestbenchGenerator(object):
         
 
 if __name__ == "__main__":
-    print '''***************** tbgen - Auto generate a testbench. *****************
+    print ('''***************** tbgen - Auto generate a testbench. *****************
 Author: Xiongfei(Alex) Guo <xfguo@credosemi.com>
+Author: Arman Barraghi <abarraghi@gmail.com>
 License: Beerware
-'''
+''')
     ofile_name = None
     if len(sys.argv) == 1:
-        sys.stderr.write("ERROR: You aren't specfic a input file name.\n")
-        print "Usage: tbgen input_verilog_file_name [output_testbench_file_name]"
+        sys.stderr.write("ERROR: You haven't specified an input file name.\n")
+        print ("Usage: tbgen input_verilog_file_name [output_testbench_file_name]")
         sys.exit(1)
     elif len(sys.argv) == 3:
         ofile_name = sys.argv[2]
