@@ -55,17 +55,29 @@ class TestbenchGenerator(object):
             
     def open_outputfile(self, ofile_name = None):
         try:
-            if(ofile_name == None):
-                if(self.ofile_name == None):
-                    ofname = "tb_%s.v" % self.mod_name
-                    self.ofile = open(ofname, 'w')
-                    print ("You haven't specified an output file name, use '%s' instead." % ofname) 
-                else:
-                    self.ofile = open(self.ofile_name, 'w')
-                    print ("Output file is '%s'." % self.ofile_name)
+            # Determine the target output file path string
+            target_name = None
+            if ofile_name is not None:
+                target_name = ofile_name
+            elif self.ofile_name is not None:
+                target_name = self.ofile_name
             else:
-                self.ofile = open(ofile_name, 'w')
-                print ("Output file is '%s'." % ofile_name)
+                target_name = "tb_%s.v" % self.mod_name
+                print("You haven't specified an output file name, use '%s' instead." % target_name)
+            
+            if target_name != "tb_%s.v" % self.mod_name:
+                 print("Output file is '%s'." % target_name)
+
+            # Use pathlib to handle directory creation
+            target_path = Path(target_name)
+            
+            # Create parent directories if they don't exist
+            # parents=True allows creating nested directories (e.g., a/b/c)
+            # exist_ok=True prevents errors if the directory is already there
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+
+            self.ofile = open(target_path, 'w')
+
         except Exception as e:
             print ("ERROR: open and write output file error. \n ERROR:    %s" % e)
             sys.exit(1)
@@ -172,8 +184,8 @@ class TestbenchGenerator(object):
         #print(cur_dir)
         root_dir = Path(re.search(r'[\w/]*uArch_x86_proj', str(cur_dir)).group())
         #print(root_dir)
-        rel_path = cur_dir.relative_to(root_dir);
-        #print(rel_path);
+        rel_path = cur_dir.relative_to(root_dir)
+        #print(rel_path)
         self.printo("`timescale 1ns / 1ps\n`include \"%s\"\nmodule tb_%s;\n\n" % (str(rel_path), self.mod_name))
         
     def print_module_end(self):
@@ -214,7 +226,7 @@ License: Beerware
     ofile_name = None
     if len(sys.argv) == 1:
         sys.stderr.write("ERROR: You haven't specified an input file name.\n")
-        print ("Usage: tbgen input_verilog_file_name [output_testbench_file_name]")
+        print ("Usage: tbgen <input_verilog_file_path> [<output_testbench_file_path>]")
         sys.exit(1)
     elif len(sys.argv) == 3:
         ofile_name = sys.argv[2]
