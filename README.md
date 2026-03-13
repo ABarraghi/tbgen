@@ -13,6 +13,7 @@ Make sure you have python3 on your system.
 ----
 
 Author: Xiongfei(Alex) Guo <xfguo@credosemi.com>
+
 Author: Arman Barraghi <abarraghi@gmail.com>
 
 License: Beerware
